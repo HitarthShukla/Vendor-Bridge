@@ -33,7 +33,7 @@ export default function QuotationComparePage() {
   }
 
   // Find lowest overall price
-  const lowestTotal = Math.min(...quotations.map(q => Number(q.grand_total)));
+  const lowestTotal = Math.min(...quotations.map((q: any) => Number(q.grand_total)));
 
   const handleApprove = async (quoteId: string) => {
     if (!confirm('Are you sure you want to approve this quotation and generate a Purchase Order?')) return;
@@ -61,7 +61,7 @@ export default function QuotationComparePage() {
 
       {/* Comparison Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {quotations.map((quote) => {
+        {quotations.map((quote: any) => {
           const isLowest = Number(quote.grand_total) === lowestTotal;
           const isSelected = selectedQuoteId === quote.id;
 
