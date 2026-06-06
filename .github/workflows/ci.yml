@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+
+jobs:
+  lint-typecheck-test:
+    name: Lint, Typecheck & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vendorbridge
+          POSTGRES_PASSWORD: vendorbridge
+          POSTGRES_DB: vendorbridge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build:shared
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: apps/server
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm run test
+        env:
+          DATABASE_URL: postgresql://vendorbridge:vendorbridge@localhost:5432/vendorbridge_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-256-bit-minimum-key-length
+          JWT_REFRESH_SECRET: test-refresh-secret-256-bit-minimum
+          JWT_EXPIRES_IN: 15m
+          REFRESH_EXPIRES_IN: 7d
+          NODE_ENV: test

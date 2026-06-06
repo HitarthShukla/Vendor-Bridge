@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    @apply border-neutral-200;
+  }
+
+  body {
+    @apply bg-neutral-50 text-neutral-900 font-sans antialiased;
+  }
+
+  h1 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+
+  h2 {
+    @apply text-lg font-medium;
+  }
+
+  h3 {
+    @apply text-base font-medium;
+  }
+}
+
+@layer components {
+  /* ─── Status Badges ────────────────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-draft { @apply bg-neutral-100 text-neutral-700; }
+  .badge-pending { @apply bg-warning-50 text-warning-700; }
+  .badge-active, .badge-published { @apply bg-brand-50 text-brand-700; }
+  .badge-approved, .badge-confirmed, .badge-selected { @apply bg-success-50 text-success-700; }
+  .badge-rejected, .badge-cancelled { @apply bg-danger-50 text-danger-700; }
+  .badge-paid { @apply bg-success-50 text-success-800; }
+  .badge-overdue { @apply bg-danger-50 text-danger-800; }
+  .badge-sent { @apply bg-brand-50 text-brand-700; }
+
+  /* ─── Cards ────────────────────────────────────────────────────────────────── */
+  .card {
+    @apply bg-white rounded-xl border border-neutral-200 shadow-sm;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-200 hover:shadow-md hover:border-neutral-300;
+  }
+
+  /* ─── Buttons ──────────────────────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-50 focus:ring-neutral-400;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger-500 text-white hover:bg-danger-700 focus:ring-danger-500;
+  }
+
+  .btn-ghost {
+    @apply btn text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900;
+  }
+
+  /* ─── Form inputs ──────────────────────────────────────────────────────────── */
+  .input {
+    @apply flex h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .label {
+    @apply text-xs font-medium text-neutral-600 uppercase tracking-wide;
+  }
+
+  /* ─── Document IDs ─────────────────────────────────────────────────────────── */
+  .doc-id {
+    @apply font-mono text-xs text-neutral-500;
+  }
+
+  /* ─── Glass effect ─────────────────────────────────────────────────────────── */
+  .glass {
+    @apply bg-white/80 backdrop-blur-lg border border-white/20;
+  }
+
+  /* ─── Sidebar ──────────────────────────────────────────────────────────────── */
+  .sidebar {
+    @apply w-64 bg-neutral-900 text-white min-h-screen flex flex-col;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-300 rounded-lg transition-all duration-200 hover:bg-neutral-800 hover:text-white;
+  }
+
+  .sidebar-link-active {
+    @apply sidebar-link bg-brand-600/20 text-brand-400 hover:bg-brand-600/30;
+  }
+
+  /* ─── Skeleton Loading ─────────────────────────────────────────────────────── */
+  .skeleton {
+    @apply animate-pulse bg-neutral-200 rounded;
+  }
+}
+
+/* ─── Scrollbar Styling ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400;
+}

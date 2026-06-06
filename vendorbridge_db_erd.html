@@ -1,0 +1,174 @@
+
+<style>
+#erd svg { width: 100%; }
+#erd svg.erDiagram .divider path { stroke-opacity: 0.4; }
+#erd svg.erDiagram .row-rect-odd path,
+#erd svg.erDiagram .row-rect-odd rect,
+#erd svg.erDiagram .row-rect-even path,
+#erd svg.erDiagram .row-rect-even rect { stroke: none !important; }
+</style>
+<div id="erd" style="padding:4px 0"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '12px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+const diagram = `erDiagram
+  users {
+    uuid id PK
+    string email
+    string name
+    enum role
+    boolean is_active
+    timestamptz created_at
+  }
+  refresh_tokens {
+    uuid id PK
+    uuid user_id FK
+    string token
+    timestamptz expires_at
+    timestamptz revoked_at
+  }
+  vendors {
+    uuid id PK
+    uuid user_id FK
+    string company_name
+    string gst_number
+    string email
+    enum status
+    decimal rating
+    json address
+    json bank_details
+  }
+  rfqs {
+    uuid id PK
+    string rfq_number
+    string title
+    enum status
+    uuid created_by FK
+    timestamptz deadline
+  }
+  rfq_items {
+    uuid id PK
+    uuid rfq_id FK
+    string name
+    decimal quantity
+    string unit
+  }
+  rfq_vendors {
+    uuid rfq_id FK
+    uuid vendor_id FK
+    timestamptz invited_at
+  }
+  quotations {
+    uuid id PK
+    string quotation_number
+    uuid rfq_id FK
+    uuid vendor_id FK
+    enum status
+    decimal total_amount
+    int delivery_days
+  }
+  quotation_items {
+    uuid id PK
+    uuid quotation_id FK
+    uuid rfq_item_id FK
+    decimal unit_price
+    decimal tax_percent
+    decimal total_price
+  }
+  approvals {
+    uuid id PK
+    uuid quotation_id FK
+    uuid approver_id FK
+    enum status
+    string remarks
+    timestamptz decided_at
+  }
+  purchase_orders {
+    uuid id PK
+    string po_number
+    uuid vendor_id FK
+    enum status
+    decimal grand_total
+    string blockchain_hash
+    string blockchain_tx
+  }
+  invoices {
+    uuid id PK
+    string invoice_number
+    uuid purchase_order_id FK
+    uuid vendor_id FK
+    enum status
+    decimal grand_total
+    string blockchain_hash
+    timestamptz due_date
+  }
+  activity_logs {
+    uuid id PK
+    uuid user_id FK
+    string entity_type
+    uuid entity_id
+    enum action
+    json metadata
+  }
+  notifications {
+    uuid id PK
+    uuid user_id FK
+    string title
+    string type
+    boolean is_read
+  }
+
+  users ||--o{ refresh_tokens : "has"
+  users ||--o| vendors : "is"
+  users ||--o{ rfqs : "creates"
+  users ||--o{ approvals : "decides"
+  users ||--o{ activity_logs : "generates"
+  users ||--o{ notifications : "receives"
+  vendors ||--o{ rfq_vendors : "assigned to"
+  rfqs ||--o{ rfq_items : "contains"
+  rfqs ||--o{ rfq_vendors : "invites"
+  rfqs ||--o{ quotations : "receives"
+  rfq_items ||--o{ quotation_items : "priced in"
+  quotations ||--o{ quotation_items : "has"
+  quotations ||--o| approvals : "triggers"
+  vendors ||--o{ quotations : "submits"
+  vendors ||--o{ purchase_orders : "fulfills"
+  vendors ||--o{ invoices : "issues"
+  purchase_orders ||--o{ invoices : "generates"
+`;
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx','8');
+  for (const a of ['fill','stroke','stroke-width','class','style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => p.setAttribute('stroke','none'));
+</script>

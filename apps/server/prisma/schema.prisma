@@ -1,0 +1,386 @@
+// ─── VendorBridge Prisma Schema ────────────────────────────────────────────────
+// Source of truth for database structure.
+// See Project Bible §4 for design principles.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  PROCUREMENT_OFFICER
+  MANAGER
+  VENDOR
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+  PENDING_VERIFICATION
+}
+
+enum RfqStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+}
+
+enum QuotationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  SELECTED
+  REJECTED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ESCALATED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  CONFIRMED
+  PARTIALLY_DELIVERED
+  DELIVERED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  GENERATED
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+  DELETED
+  STATUS_CHANGED
+  APPROVED
+  REJECTED
+  SENT
+  DOWNLOADED
+  VIEWED
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String   @unique
+  password   String
+  name       String
+  role       UserRole
+  is_active  Boolean  @default(true)
+  avatar_url String?
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+  deleted_at DateTime? @db.Timestamptz
+
+  refresh_tokens RefreshToken[]
+  rfqs_created   Rfq[]           @relation("CreatedBy")
+  approvals      Approval[]
+  activity_logs  ActivityLog[]
+  vendor_profile Vendor?
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token      String    @unique
+  user_id    String    @db.Uuid
+  expires_at DateTime  @db.Timestamptz
+  revoked_at DateTime? @db.Timestamptz
+  created_at DateTime  @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([user_id])
+  @@map("refresh_tokens")
+}
+
+// ─── Vendors ──────────────────────────────────────────────────────────────────
+
+model Vendor {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String?      @unique @db.Uuid
+  name         String
+  company_name String
+  email        String       @unique
+  phone        String
+  gst_number   String       @unique
+  pan_number   String?
+  category     String
+  address      Json
+  bank_details Json?
+  status       VendorStatus @default(PENDING_VERIFICATION)
+  rating       Decimal      @default(0) @db.Decimal(3, 2)
+  total_orders Int          @default(0)
+  notes        String?
+  created_at   DateTime     @default(now()) @db.Timestamptz
+  updated_at   DateTime     @updatedAt @db.Timestamptz
+  deleted_at   DateTime?    @db.Timestamptz
+
+  user            User?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  rfq_assignments RfqVendor[]
+  quotations      Quotation[]
+  purchase_orders PurchaseOrder[]
+  invoices        Invoice[]
+
+  @@index([status])
+  @@index([category])
+  @@index([gst_number])
+  @@map("vendors")
+}
+
+// ─── RFQ (Request for Quotation) ──────────────────────────────────────────────
+
+model Rfq {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rfq_number  String    @unique
+  title       String
+  description String?
+  status      RfqStatus @default(DRAFT)
+  deadline    DateTime  @db.Timestamptz
+  created_by  String    @db.Uuid
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @updatedAt @db.Timestamptz
+  deleted_at  DateTime? @db.Timestamptz
+
+  creator     User          @relation("CreatedBy", fields: [created_by], references: [id])
+  items       RfqItem[]
+  vendors     RfqVendor[]
+  quotations  Quotation[]
+  attachments Attachment[]
+
+  @@index([status])
+  @@index([created_by])
+  @@index([deadline])
+  @@map("rfqs")
+}
+
+model RfqItem {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rfq_id      String  @db.Uuid
+  name        String
+  description String?
+  quantity    Decimal @db.Decimal(15, 3)
+  unit        String
+  category    String?
+
+  rfq             Rfq             @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
+  quotation_items QuotationItem[]
+
+  @@index([rfq_id])
+  @@map("rfq_items")
+}
+
+model RfqVendor {
+  rfq_id    String    @db.Uuid
+  vendor_id String    @db.Uuid
+  invited_at DateTime @default(now()) @db.Timestamptz
+  viewed_at  DateTime? @db.Timestamptz
+
+  rfq    Rfq    @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendor_id], references: [id], onDelete: Cascade)
+
+  @@id([rfq_id, vendor_id])
+  @@map("rfq_vendors")
+}
+
+// ─── Quotations ───────────────────────────────────────────────────────────────
+
+model Quotation {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quotation_number String          @unique
+  rfq_id           String          @db.Uuid
+  vendor_id        String          @db.Uuid
+  status           QuotationStatus @default(DRAFT)
+  total_amount     Decimal         @db.Decimal(15, 2)
+  currency         String          @default("INR")
+  delivery_days    Int
+  validity_days    Int
+  notes            String?
+  submitted_at     DateTime?       @db.Timestamptz
+  created_at       DateTime        @default(now()) @db.Timestamptz
+  updated_at       DateTime        @updatedAt @db.Timestamptz
+
+  rfq      Rfq             @relation(fields: [rfq_id], references: [id])
+  vendor   Vendor          @relation(fields: [vendor_id], references: [id])
+  items    QuotationItem[]
+  approval Approval?
+
+  @@unique([rfq_id, vendor_id])
+  @@index([rfq_id])
+  @@index([vendor_id])
+  @@index([status])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quotation_id String  @db.Uuid
+  rfq_item_id  String  @db.Uuid
+  unit_price   Decimal @db.Decimal(15, 2)
+  quantity     Decimal @db.Decimal(15, 3)
+  tax_percent  Decimal @db.Decimal(5, 2) @default(18)
+  total_price  Decimal @db.Decimal(15, 2)
+  notes        String?
+
+  quotation Quotation @relation(fields: [quotation_id], references: [id], onDelete: Cascade)
+  rfq_item  RfqItem   @relation(fields: [rfq_item_id], references: [id])
+
+  @@index([quotation_id])
+  @@map("quotation_items")
+}
+
+// ─── Approvals ────────────────────────────────────────────────────────────────
+
+model Approval {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quotation_id String         @unique @db.Uuid
+  approver_id  String         @db.Uuid
+  status       ApprovalStatus @default(PENDING)
+  remarks      String?
+  decided_at   DateTime?      @db.Timestamptz
+  created_at   DateTime       @default(now()) @db.Timestamptz
+  updated_at   DateTime       @updatedAt @db.Timestamptz
+
+  quotation Quotation @relation(fields: [quotation_id], references: [id])
+  approver  User      @relation(fields: [approver_id], references: [id])
+
+  @@index([approver_id])
+  @@index([status])
+  @@map("approvals")
+}
+
+// ─── Purchase Orders ──────────────────────────────────────────────────────────
+
+model PurchaseOrder {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  po_number       String              @unique
+  quotation_id    String              @unique @db.Uuid
+  vendor_id       String              @db.Uuid
+  status          PurchaseOrderStatus @default(DRAFT)
+  subtotal        Decimal             @db.Decimal(15, 2)
+  tax_total       Decimal             @db.Decimal(15, 2)
+  grand_total     Decimal             @db.Decimal(15, 2)
+  delivery_date   DateTime?           @db.Timestamptz
+  terms           String?
+  blockchain_tx   String?
+  blockchain_hash String?
+  created_at      DateTime            @default(now()) @db.Timestamptz
+  updated_at      DateTime            @updatedAt @db.Timestamptz
+  deleted_at      DateTime?           @db.Timestamptz
+
+  vendor   Vendor    @relation(fields: [vendor_id], references: [id])
+  invoices Invoice[]
+
+  @@index([vendor_id])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+// ─── Invoices ─────────────────────────────────────────────────────────────────
+
+model Invoice {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoice_number    String        @unique
+  purchase_order_id String        @db.Uuid
+  vendor_id         String        @db.Uuid
+  status            InvoiceStatus @default(GENERATED)
+  subtotal          Decimal       @db.Decimal(15, 2)
+  tax_total         Decimal       @db.Decimal(15, 2)
+  grand_total       Decimal       @db.Decimal(15, 2)
+  due_date          DateTime      @db.Timestamptz
+  paid_at           DateTime?     @db.Timestamptz
+  pdf_url           String?
+  email_sent_at     DateTime?     @db.Timestamptz
+  blockchain_hash   String?
+  created_at        DateTime      @default(now()) @db.Timestamptz
+  updated_at        DateTime      @updatedAt @db.Timestamptz
+  deleted_at        DateTime?     @db.Timestamptz
+
+  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id])
+  vendor         Vendor        @relation(fields: [vendor_id], references: [id])
+
+  @@index([purchase_order_id])
+  @@index([vendor_id])
+  @@index([status])
+  @@index([due_date])
+  @@map("invoices")
+}
+
+// ─── Attachments ──────────────────────────────────────────────────────────────
+
+model Attachment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rfq_id      String?  @db.Uuid
+  file_name   String
+  file_path   String
+  file_size   Int
+  mime_type   String
+  uploaded_by String   @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  rfq Rfq? @relation(fields: [rfq_id], references: [id], onDelete: SetNull)
+
+  @@index([rfq_id])
+  @@map("attachments")
+}
+
+// ─── Activity Logs ────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?        @db.Uuid
+  entity_type String
+  entity_id   String         @db.Uuid
+  action      ActivityAction
+  metadata    Json?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime       @default(now()) @db.Timestamptz
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([entity_type, entity_id])
+  @@index([user_id])
+  @@index([created_at])
+  @@map("activity_logs")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  title      String
+  message    String
+  type       String
+  entity_id  String?  @db.Uuid
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  @@index([user_id, is_read])
+  @@index([created_at])
+  @@map("notifications")
+}
