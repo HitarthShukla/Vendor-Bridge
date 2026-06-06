@@ -42,14 +42,16 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const statCards = [
-    { label: 'Active RFQs', value: stats?.activeRfqs ?? 0, icon: FileText, color: 'text-brand-600', bg: 'bg-brand-50' },
-    { label: 'Pending Approvals', value: stats?.pendingApprovals ?? 0, icon: Clock, color: 'text-warning-700', bg: 'bg-warning-50' },
-    { label: 'Active Vendors', value: stats?.totalVendors ?? 0, icon: Users, color: 'text-success-700', bg: 'bg-success-50' },
-    { label: 'Purchase Orders', value: stats?.totalPOs ?? 0, icon: ShoppingCart, color: 'text-brand-700', bg: 'bg-brand-50' },
-    { label: 'Invoices', value: stats?.totalInvoices ?? 0, icon: BarChart3, color: 'text-neutral-700', bg: 'bg-neutral-100' },
-    { label: 'Monthly Spend', value: `₹${((stats?.monthlySpend ?? 0) / 100000).toFixed(1)}L`, icon: TrendingUp, color: 'text-success-700', bg: 'bg-success-50' },
+  const allStatCards = [
+    { label: 'Active RFQs', value: stats?.activeRfqs ?? 0, icon: FileText, color: 'text-brand-600', bg: 'bg-brand-50', roles: ['ADMIN', 'MANAGER', 'PROCUREMENT_OFFICER'] },
+    { label: 'Pending Approvals', value: stats?.pendingApprovals ?? 0, icon: Clock, color: 'text-warning-700', bg: 'bg-warning-50', roles: ['ADMIN', 'MANAGER'] },
+    { label: 'Active Vendors', value: stats?.totalVendors ?? 0, icon: Users, color: 'text-success-700', bg: 'bg-success-50', roles: ['ADMIN', 'MANAGER', 'PROCUREMENT_OFFICER'] },
+    { label: 'Purchase Orders', value: stats?.totalPOs ?? 0, icon: ShoppingCart, color: 'text-brand-700', bg: 'bg-brand-50', roles: ['ADMIN', 'MANAGER', 'PROCUREMENT_OFFICER'] },
+    { label: 'Invoices', value: stats?.totalInvoices ?? 0, icon: BarChart3, color: 'text-neutral-700', bg: 'bg-neutral-100', roles: ['ADMIN', 'MANAGER', 'PROCUREMENT_OFFICER'] },
+    { label: 'Monthly Spend', value: `₹${((stats?.monthlySpend ?? 0) / 100000).toFixed(1)}L`, icon: TrendingUp, color: 'text-success-700', bg: 'bg-success-50', roles: ['ADMIN', 'MANAGER'] },
   ];
+
+  const statCards = allStatCards.filter((card) => card.roles.includes(user?.role || ''));
 
   return (
     <>

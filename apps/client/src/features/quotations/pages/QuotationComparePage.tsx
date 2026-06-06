@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuotationsByRfq, useApproveQuotation } from '../api/quotationApi';
 import { useRfq } from '@/features/rfqs/api/rfqApi';
+import { useAuthStore } from '@/store/authStore';
 import { CheckCircle, AlertCircle, ArrowLeft, Building2, Truck, DollarSign } from 'lucide-react';
 
 export default function QuotationComparePage() {
@@ -12,6 +13,9 @@ export default function QuotationComparePage() {
   const approveMutation = useApproveQuotation();
   
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
+  const user = useAuthStore((s) => s.user);
+  // Only MANAGER and ADMIN can approve quotations (backend enforces authorize('MANAGER') + ADMIN bypass)
+  const canApprove = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   if (rfqLoading || quotesLoading) {
     return <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" /></div>;
@@ -120,21 +124,23 @@ export default function QuotationComparePage() {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="pt-4 border-t border-neutral-100">
-                  <button 
-                    onClick={() => handleApprove(quote.id)}
-                    className="w-full btn-primary justify-center"
-                    disabled={approveMutation.isPending}
-                  >
-                    {approveMutation.isPending && selectedQuoteId === quote.id ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                    )}
-                    Approve & Generate PO
-                  </button>
-                </div>
+                {/* Actions — only MANAGER / ADMIN can approve */}
+                {canApprove && (
+                  <div className="pt-4 border-t border-neutral-100">
+                    <button 
+                      onClick={() => handleApprove(quote.id)}
+                      className="w-full btn-primary justify-center"
+                      disabled={approveMutation.isPending}
+                    >
+                      {approveMutation.isPending && selectedQuoteId === quote.id ? (
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                      )}
+                      Approve & Generate PO
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );

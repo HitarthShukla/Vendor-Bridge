@@ -14,7 +14,8 @@ export const useVendors = (query = '') => {
     queryKey: vendorKeys.list(query),
     queryFn: async () => {
       const { data } = await apiClient.get(`/vendors${query}`);
-      return data.data;
+      // paginated response: { success, data: vendor[], meta: {...} }
+      return { vendors: data.data || [], meta: data.meta };
     },
   });
 };

@@ -14,7 +14,8 @@ export const useRfqs = (query = '') => {
     queryKey: rfqKeys.list(query),
     queryFn: async () => {
       const { data } = await apiClient.get(`/rfqs${query}`);
-      return data.data;
+      // paginated response: { success, data: rfq[], meta: {...} }
+      return { rfqs: data.data || [], meta: data.meta };
     },
   });
 };

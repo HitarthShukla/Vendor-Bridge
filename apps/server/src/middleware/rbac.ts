@@ -12,6 +12,12 @@ export const authorize = (...roles: string[]) => {
       return;
     }
 
+    // ADMIN has access to all protected routes
+    if (req.user.role === 'ADMIN') {
+      next();
+      return;
+    }
+
     if (!roles.includes(req.user.role)) {
       fail(res, 403, 'FORBIDDEN', 'Insufficient permissions for this action');
       return;

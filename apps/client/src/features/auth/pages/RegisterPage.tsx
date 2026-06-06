@@ -29,9 +29,23 @@ export default function RegisterPage() {
       const response = await apiClient.post('/auth/register', data);
       const { user, accessToken, refreshToken } = response.data.data;
       setAuth(user, accessToken, refreshToken);
-      navigate('/dashboard');
+      if (user.role === 'VENDOR') {
+        navigate('/vendor/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Registration failed.');
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.error?.message;
+      if (status === 429) {
+        setError('Too many requests. Please wait a moment and try again.');
+      } else if (status === 409 || (serverMsg && serverMsg.includes('already'))) {
+        setError('An account with this email already exists. Please sign in instead.');
+      } else if (!err.response) {
+        setError('Cannot connect to the server. Please check that the backend is running.');
+      } else {
+        setError(typeof serverMsg === 'string' ? serverMsg : 'Registration failed. Please check your inputs.');
+      }
     } finally {
       setLoading(false);
     }

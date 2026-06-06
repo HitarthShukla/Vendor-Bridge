@@ -1,20 +1,28 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useRfq, usePublishRfq, useCloseRfq } from '../api/rfqApi';
+import { useAuthStore } from '@/store/authStore';
 import { ArrowLeft, FileText, Calendar, Users, Send, Lock, ExternalLink } from 'lucide-react';
 
 export default function RFQDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: rfq, isLoading } = useRfq(id!);
   const publishMutation = usePublishRfq(id!);
   const closeMutation = useCloseRfq(id!);
+  const user = useAuthStore((s) => s.user);
+
+  const isVendorView = user?.role === 'VENDOR' || location.pathname.startsWith('/vendor');
+  const canManageRfq = !isVendorView && (user?.role === 'ADMIN' || user?.role === 'PROCUREMENT_OFFICER');
+  const canCompare = !isVendorView && (user?.role === 'ADMIN' || user?.role === 'PROCUREMENT_OFFICER' || user?.role === 'MANAGER');
+  const backLink = isVendorView ? '/vendor/rfqs' : '/rfqs';
 
   if (isLoading) {
     return <div className="max-w-4xl mx-auto space-y-6"><div className="skeleton h-8 w-48" /><div className="card p-6 space-y-4"><div className="skeleton h-6 w-64" /><div className="skeleton h-4 w-48" /></div></div>;
   }
 
   if (!rfq) {
-    return <div className="card p-8 text-center text-danger-600 bg-danger-50 max-w-lg mx-auto mt-12">RFQ not found.<Link to="/rfqs" className="btn-secondary mt-4 mx-auto">Back to RFQs</Link></div>;
+    return <div className="card p-8 text-center text-danger-600 bg-danger-50 max-w-lg mx-auto mt-12">RFQ not found.<Link to={backLink} className="btn-secondary mt-4 mx-auto">Back to RFQs</Link></div>;
   }
 
   const handlePublish = async () => {
@@ -30,7 +38,7 @@ export default function RFQDetailPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/rfqs" className="btn-ghost p-2 -ml-2 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link to={backLink} className="btn-ghost p-2 -ml-2 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-neutral-900">{rfq.rfq_number}</h2>
@@ -39,9 +47,29 @@ export default function RFQDetailPage() {
           <p className="text-neutral-500 text-sm">{rfq.title}</p>
         </div>
         <div className="flex gap-2">
-          {rfq.status === 'DRAFT' && <button onClick={handlePublish} className="btn-primary" disabled={publishMutation.isPending}><Send className="w-4 h-4" />{publishMutation.isPending ? 'Publishing...' : 'Publish'}</button>}
-          {rfq.status === 'PUBLISHED' && <button onClick={handleClose} className="btn-danger" disabled={closeMutation.isPending}><Lock className="w-4 h-4" />{closeMutation.isPending ? 'Closing...' : 'Close RFQ'}</button>}
-          {rfq.status !== 'DRAFT' && <Link to={`/quotations/compare/${rfq.id}`} className="btn-secondary"><ExternalLink className="w-4 h-4" />Compare Quotes</Link>}
+          {/* Staff management actions */}
+          {canManageRfq && rfq.status === 'DRAFT' && (
+            <button onClick={handlePublish} className="btn-primary" disabled={publishMutation.isPending}>
+              <Send className="w-4 h-4" />{publishMutation.isPending ? 'Publishing...' : 'Publish'}
+            </button>
+          )}
+          {canManageRfq && rfq.status === 'PUBLISHED' && (
+            <button onClick={handleClose} className="btn-danger" disabled={closeMutation.isPending}>
+              <Lock className="w-4 h-4" />{closeMutation.isPending ? 'Closing...' : 'Close RFQ'}
+            </button>
+          )}
+          {canCompare && rfq.status !== 'DRAFT' && (
+            <Link to={`/quotations/compare/${rfq.id}`} className="btn-secondary">
+              <ExternalLink className="w-4 h-4" />Compare Quotes
+            </Link>
+          )}
+
+          {/* Vendor-specific: show "Submit Quote" when RFQ is open */}
+          {isVendorView && rfq.status === 'PUBLISHED' && (
+            <Link to={`/vendor/quotations`} className="btn-primary">
+              <Send className="w-4 h-4" />Submit Quotation
+            </Link>
+          )}
         </div>
       </div>
 
@@ -68,7 +96,7 @@ export default function RFQDetailPage() {
                   {(rfq as any).items?.map((item: any, i: number) => (
                     <tr key={item.id} className="border-b border-neutral-100">
                       <td className="py-3 pr-4 text-neutral-400">{i + 1}</td>
-                      <td className="py-3 pr-4 font-medium">{item.description}</td>
+                      <td className="py-3 pr-4 font-medium">{item.description || item.name}</td>
                       <td className="py-3 pr-4">{item.quantity}</td>
                       <td className="py-3">{item.unit}</td>
                     </tr>
@@ -85,21 +113,24 @@ export default function RFQDetailPage() {
             <h3 className="text-sm font-semibold text-neutral-500 mb-4 flex items-center gap-2"><Calendar className="w-4 h-4" />Timeline</h3>
             <div className="space-y-3 text-sm">
               <div><p className="text-neutral-400">Created</p><p className="font-medium">{new Date(rfq.created_at).toLocaleDateString()}</p></div>
-              <div><p className="text-neutral-400">Deadline</p><p className="font-medium text-danger-600">{new Date(rfq.submission_deadline).toLocaleDateString()}</p></div>
+              <div><p className="text-neutral-400">Deadline</p><p className="font-medium text-danger-600">{new Date(rfq.submission_deadline || rfq.deadline).toLocaleDateString()}</p></div>
             </div>
           </div>
 
-          <div className="card p-6">
-            <h3 className="text-sm font-semibold text-neutral-500 mb-4 flex items-center gap-2"><Users className="w-4 h-4" />Assigned Vendors</h3>
-            <div className="space-y-2">
-              {(rfq as any).vendors?.length ? (rfq as any).vendors.map((v: any) => (
-                <div key={v.id} className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg">
-                  <div className="w-7 h-7 rounded bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">{v.vendor?.company_name?.charAt(0)}</div>
-                  <span className="text-sm font-medium truncate">{v.vendor?.company_name}</span>
-                </div>
-              )) : <p className="text-sm text-neutral-500">No vendors assigned</p>}
+          {/* Show assigned vendors only for staff */}
+          {!isVendorView && (
+            <div className="card p-6">
+              <h3 className="text-sm font-semibold text-neutral-500 mb-4 flex items-center gap-2"><Users className="w-4 h-4" />Assigned Vendors</h3>
+              <div className="space-y-2">
+                {(rfq as any).vendors?.length ? (rfq as any).vendors.map((v: any) => (
+                  <div key={v.vendor_id || v.id} className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg">
+                    <div className="w-7 h-7 rounded bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">{v.vendor?.company_name?.charAt(0) || '?'}</div>
+                    <span className="text-sm font-medium truncate">{v.vendor?.company_name || 'Vendor'}</span>
+                  </div>
+                )) : <p className="text-sm text-neutral-500">No vendors assigned</p>}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -38,6 +38,7 @@ export default function AppLayout() {
   const getLinksForRole = (role?: string) => {
     if (role === 'VENDOR') {
       return [
+        { label: 'Dashboard', icon: BarChart3, href: '/vendor/dashboard' },
         { label: 'Active RFQs', icon: FileText, href: '/vendor/rfqs' },
         { label: 'My Quotations', icon: FileText, href: '/vendor/quotations' },
         { label: 'Purchase Orders', icon: ShoppingCart, href: '/vendor/purchase-orders' },
@@ -51,6 +52,7 @@ export default function AppLayout() {
       { label: 'RFQs', icon: FileText, href: '/rfqs' },
     ];
 
+    // Only MANAGER and ADMIN can approve quotations
     if (role === 'ADMIN' || role === 'MANAGER') {
       links.push({ label: 'Approvals', icon: CheckCircle, href: '/approvals' });
     }

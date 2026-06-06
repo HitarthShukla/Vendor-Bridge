@@ -28,9 +28,24 @@ export default function LoginPage() {
       const response = await apiClient.post('/auth/login', data);
       const { user, accessToken, refreshToken } = response.data.data;
       setAuth(user, accessToken, refreshToken);
-      navigate('/dashboard');
+      // Role-based redirect
+      if (user.role === 'VENDOR') {
+        navigate('/vendor/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Login failed. Please try again.');
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.error?.message;
+      if (status === 429) {
+        setError('Too many login attempts. Please wait a minute and try again.');
+      } else if (status === 401) {
+        setError('Invalid email or password. Please check your credentials.');
+      } else if (!err.response) {
+        setError('Cannot connect to the server. Please check that the backend is running.');
+      } else {
+        setError(serverMsg || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

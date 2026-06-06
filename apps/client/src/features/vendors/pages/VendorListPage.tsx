@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useVendors } from '../api/vendorApi';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import { Plus, Search, MapPin, Building2, Phone } from 'lucide-react';
 
 export default function VendorListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const { data, isLoading, error } = useVendors(searchTerm ? `?search=${searchTerm}` : '');
+  const user = useAuthStore((s) => s.user);
+  const canCreateVendor = user?.role === 'ADMIN' || user?.role === 'PROCUREMENT_OFFICER';
 
   return (
     <div className="space-y-6">
@@ -15,10 +18,12 @@ export default function VendorListPage() {
           <h2 className="text-2xl font-bold text-neutral-900">Vendors</h2>
           <p className="text-neutral-500 text-sm">Manage your supplier directory and performance.</p>
         </div>
-        <Link to="/vendors/new" className="btn-primary">
-          <Plus className="w-4 h-4" />
-          Add Vendor
-        </Link>
+        {canCreateVendor && (
+          <Link to="/vendors/new" className="btn-primary">
+            <Plus className="w-4 h-4" />
+            Add Vendor
+          </Link>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -55,13 +60,15 @@ export default function VendorListPage() {
           <Building2 className="w-12 h-12 text-neutral-300 mb-4" />
           <h3 className="text-lg font-medium text-neutral-900 mb-1">No vendors found</h3>
           <p className="text-neutral-500 mb-6">You haven't added any vendors yet, or no vendors match your search.</p>
-          <Link to="/vendors/new" className="btn-primary">
-            <Plus className="w-4 h-4" /> Add your first vendor
-          </Link>
+          {canCreateVendor && (
+            <Link to="/vendors/new" className="btn-primary">
+              <Plus className="w-4 h-4" /> Add your first vendor
+            </Link>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data?.vendors.map((vendor) => (
+          {data?.vendors?.map((vendor: any) => (
             <Link key={vendor.id} to={`/vendors/${vendor.id}`} className="card-hover p-6 flex flex-col">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
@@ -69,30 +76,29 @@ export default function VendorListPage() {
                 </div>
                 <span className={`badge ${
                   vendor.status === 'ACTIVE' ? 'badge-active' :
-                  vendor.status === 'INACTIVE' ? 'badge-draft' : 'badge-danger'
+                  vendor.status === 'INACTIVE' ? 'badge-draft' :
+                  vendor.status === 'PENDING_VERIFICATION' ? 'badge-pending' : 'badge-danger'
                 }`}>
-                  {vendor.status}
+                  {vendor.status?.replace('_', ' ')}
                 </span>
               </div>
               
               <h3 className="text-lg font-bold text-neutral-900 mb-1 truncate">{vendor.company_name}</h3>
+              <p className="text-sm text-neutral-500 mb-1 truncate">{vendor.name}</p>
               <div className="flex items-center gap-2 text-sm text-neutral-500 mb-4">
                 <span className="bg-neutral-100 px-2 py-0.5 rounded text-xs font-medium">
-                  {vendor.categories[0] || 'General'}
+                  {vendor.category || 'General'}
                 </span>
-                {vendor.categories.length > 1 && (
-                  <span className="text-xs">+{vendor.categories.length - 1} more</span>
-                )}
               </div>
 
               <div className="space-y-2 mt-auto pt-4 border-t border-neutral-100 text-sm text-neutral-600">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-                  <span className="truncate">{vendor.address?.city || 'No city'}, {vendor.address?.state || 'No state'}</span>
+                  <span className="truncate">{vendor.email}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-                  <span>{vendor.contact_phone || 'No phone'}</span>
+                  <span>{vendor.phone || 'No phone'}</span>
                 </div>
               </div>
             </Link>

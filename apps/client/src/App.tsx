@@ -40,6 +40,10 @@ const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage'));
 // AI Chat Widget
 const AIChatWidget = lazy(() => import('@/features/ai/components/AIChatWidget'));
 
+// Vendor-specific pages
+const VendorSubmitQuotationPage = lazy(() => import('@/features/quotations/pages/VendorSubmitQuotationPage'));
+const VendorDashboardPage = lazy(() => import('@/features/dashboard/pages/VendorDashboardPage'));
+
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-50">
@@ -57,6 +61,13 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Smart default redirect based on role
+function DefaultRedirect() {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'VENDOR') return <Navigate to="/vendor/dashboard" replace />;
+  return <Navigate to="/dashboard" replace />;
+}
+
 function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
@@ -67,7 +78,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected Procurement/Admin Routes */}
+        {/* ─── Internal Staff Routes (ADMIN / MANAGER / PROCUREMENT_OFFICER) ──── */}
         <Route
           element={
             <PrivateRoute>
@@ -79,33 +90,49 @@ function App() {
         >
           <Route path="/dashboard" element={<DashboardPage />} />
 
-          {/* Vendors */}
+          {/* Vendors — viewable by all staff, create/edit by ADMIN + PROCUREMENT */}
           <Route path="/vendors" element={<VendorListPage />} />
-          <Route path="/vendors/new" element={<VendorCreatePage />} />
+          <Route path="/vendors/new" element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER']}>
+              <VendorCreatePage />
+            </RoleGuard>
+          } />
           <Route path="/vendors/:id" element={<VendorDetailPage />} />
 
-          {/* RFQs */}
+          {/* RFQs — viewable by all staff, create by ADMIN + PROCUREMENT */}
           <Route path="/rfqs" element={<RFQListPage />} />
-          <Route path="/rfqs/new" element={<RFQCreatePage />} />
+          <Route path="/rfqs/new" element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER']}>
+              <RFQCreatePage />
+            </RoleGuard>
+          } />
           <Route path="/rfqs/:id" element={<RFQDetailPage />} />
 
-          {/* Quotations */}
+          {/* Quotation Comparison — ADMIN + PROCUREMENT + MANAGER */}
           <Route path="/quotations/compare/:rfqId" element={<QuotationComparePage />} />
 
-          {/* Approvals */}
-          <Route path="/approvals" element={<ApprovalsPage />} />
+          {/* Approvals — MANAGER + ADMIN only */}
+          <Route path="/approvals" element={
+            <RoleGuard allowedRoles={['MANAGER', 'ADMIN']}>
+              <ApprovalsPage />
+            </RoleGuard>
+          } />
 
-          {/* Purchase Orders */}
+          {/* Purchase Orders — all staff */}
           <Route path="/purchase-orders" element={<POListPage />} />
 
-          {/* Invoices */}
+          {/* Invoices — all staff */}
           <Route path="/invoices" element={<InvoiceListPage />} />
 
-          {/* Reports */}
-          <Route path="/reports" element={<ReportsPage />} />
+          {/* Reports — ADMIN + MANAGER + PROCUREMENT */}
+          <Route path="/reports" element={
+            <RoleGuard allowedRoles={['ADMIN', 'MANAGER', 'PROCUREMENT_OFFICER']}>
+              <ReportsPage />
+            </RoleGuard>
+          } />
         </Route>
 
-        {/* Protected Vendor Routes */}
+        {/* ─── Vendor Portal Routes (VENDOR role only) ────────────────────────── */}
         <Route
           path="/vendor"
           element={
@@ -116,16 +143,21 @@ function App() {
             </PrivateRoute>
           }
         >
+          <Route path="dashboard" element={<VendorDashboardPage />} />
           <Route path="rfqs" element={<RFQListPage />} />
           <Route path="rfqs/:id" element={<RFQDetailPage />} />
-          <Route path="quotations" element={<QuotationComparePage />} />
+          <Route path="quotations" element={<VendorSubmitQuotationPage />} />
           <Route path="purchase-orders" element={<POListPage />} />
           <Route path="invoices" element={<InvoiceListPage />} />
         </Route>
 
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Smart default redirect based on role */}
+        <Route path="/" element={
+          <PrivateRoute><DefaultRedirect /></PrivateRoute>
+        } />
+        <Route path="*" element={
+          <PrivateRoute><DefaultRedirect /></PrivateRoute>
+        } />
       </Routes>
 
       {/* Global AI Chat Widget — visible when authenticated */}

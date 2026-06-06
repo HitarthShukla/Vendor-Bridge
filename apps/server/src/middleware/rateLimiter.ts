@@ -9,9 +9,9 @@ interface RateLimitOptions {
 }
 
 /**
- * Redis-backed rate limiter.
- * Defaults: 100 requests per 15 minutes.
- * Auth endpoints: 10 requests per minute.
+ * Redis-backed sliding window rate limiter.
+ * Uses INCR + PEXPIRE pattern for atomic counting.
+ * Adds standard rate limit headers to every response.
  */
 export const rateLimiter = (options: RateLimitOptions) => {
   const { windowMs, maxRequests, keyPrefix = 'rl' } = options;
@@ -34,33 +34,39 @@ export const rateLimiter = (options: RateLimitOptions) => {
       res.setHeader('X-RateLimit-Reset', Date.now() + Math.max(0, ttl));
 
       if (current > maxRequests) {
-        fail(res, 429, 'RATE_LIMIT_EXCEEDED', 'Too many requests. Please try again later.');
+        const retryAfter = Math.ceil(Math.max(0, ttl) / 1000);
+        res.setHeader('Retry-After', retryAfter);
+        fail(res, 429, 'RATE_LIMIT_EXCEEDED', `Too many requests. Please try again in ${retryAfter} seconds.`);
         return;
       }
 
       next();
     } catch {
-      // If Redis is down, allow the request through
+      // If Redis is down, allow the request through (fail-open)
       next();
     }
   };
 };
 
-// Pre-configured rate limiters
+// ─── Pre-configured Rate Limiters ────────────────────────────────────────────
+
+// General API: generous limit — 500 req per 15 min per user
 export const generalLimiter = rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100,
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 500,
   keyPrefix: 'rl:general',
 });
 
+// Auth endpoints: stricter — 30 req per minute per IP (login, register, refresh)
 export const authLimiter = rateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 100,
+  windowMs: 60 * 1000,
+  maxRequests: 30,
   keyPrefix: 'rl:auth',
 });
 
+// AI assistant: prevent abuse — 20 req per hour per user
 export const aiLimiter = rateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   maxRequests: 20,
   keyPrefix: 'rl:ai',
 });

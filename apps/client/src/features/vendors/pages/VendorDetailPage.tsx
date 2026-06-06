@@ -1,10 +1,13 @@
 import { useParams, Link } from 'react-router-dom';
 import { useVendor } from '../api/vendorApi';
-import { ArrowLeft, Building2, Mail, Phone, MapPin, CreditCard, Hash, Tag } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
+import { ArrowLeft, Building2, Mail, Phone, MapPin, CreditCard, Hash, Tag, Star, ShoppingCart } from 'lucide-react';
 
 export default function VendorDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: vendor, isLoading, error } = useVendor(id!);
+  const user = useAuthStore((s) => s.user);
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'PROCUREMENT_OFFICER';
 
   if (isLoading) {
     return (
@@ -21,12 +24,18 @@ export default function VendorDetailPage() {
 
   if (error || !vendor) {
     return (
-      <div className="card p-8 text-center text-danger-600 bg-danger-50 max-w-lg mx-auto mt-12">
-        Vendor not found.
-        <Link to="/vendors" className="btn-secondary mt-4 mx-auto">Back to Vendors</Link>
+      <div className="card p-8 text-center max-w-lg mx-auto mt-12">
+        <div className="text-danger-600 bg-danger-50 rounded-lg p-6">
+          <h3 className="font-semibold text-lg mb-2">Vendor not found</h3>
+          <p className="text-sm text-danger-500 mb-4">The vendor you're looking for doesn't exist or has been removed.</p>
+          <Link to="/vendors" className="btn-secondary inline-flex">Back to Vendors</Link>
+        </div>
       </div>
     );
   }
+
+  const address = vendor.address as any;
+  const bank = vendor.bank_details as any;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -34,10 +43,14 @@ export default function VendorDetailPage() {
         <Link to="/vendors" className="btn-ghost p-2 -ml-2 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-neutral-900">{vendor.company_name}</h2>
-          <p className="text-neutral-500 text-sm">Vendor Details</p>
+          <p className="text-neutral-500 text-sm">{vendor.name} — {vendor.email}</p>
         </div>
-        <span className={`badge ${vendor.status === 'ACTIVE' ? 'badge-active' : vendor.status === 'INACTIVE' ? 'badge-draft' : 'badge-danger'}`}>
-          {vendor.status}
+        <span className={`badge ${
+          vendor.status === 'ACTIVE' ? 'badge-active' :
+          vendor.status === 'INACTIVE' ? 'badge-draft' :
+          vendor.status === 'PENDING_VERIFICATION' ? 'badge-pending' : 'badge-danger'
+        }`}>
+          {vendor.status?.replace('_', ' ')}
         </span>
       </div>
 
@@ -47,36 +60,42 @@ export default function VendorDetailPage() {
           <div className="card p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Building2 className="w-5 h-5 text-brand-500" />Company Information</h3>
             <div className="grid grid-cols-2 gap-y-4">
-              <div><p className="label">Contact Person</p><p className="text-sm font-medium">{vendor.contact_name}</p></div>
-              <div><p className="label flex items-center gap-1"><Mail className="w-3 h-3" />Email</p><p className="text-sm font-medium">{vendor.contact_email}</p></div>
-              <div><p className="label flex items-center gap-1"><Phone className="w-3 h-3" />Phone</p><p className="text-sm font-medium">{vendor.contact_phone || '—'}</p></div>
+              <div><p className="label">Contact Person</p><p className="text-sm font-medium">{vendor.name}</p></div>
+              <div><p className="label flex items-center gap-1"><Mail className="w-3 h-3" />Email</p><p className="text-sm font-medium">{vendor.email}</p></div>
+              <div><p className="label flex items-center gap-1"><Phone className="w-3 h-3" />Phone</p><p className="text-sm font-medium">{vendor.phone || '—'}</p></div>
               <div><p className="label flex items-center gap-1"><Hash className="w-3 h-3" />GST</p><p className="text-sm font-medium font-mono">{vendor.gst_number || '—'}</p></div>
               <div><p className="label">PAN</p><p className="text-sm font-medium font-mono">{vendor.pan_number || '—'}</p></div>
+              <div><p className="label">Category</p><p className="text-sm font-medium">{vendor.category || '—'}</p></div>
             </div>
+            {vendor.notes && (
+              <div className="mt-4 pt-4 border-t border-neutral-100">
+                <p className="label mb-1">Notes</p>
+                <p className="text-sm text-neutral-600">{vendor.notes}</p>
+              </div>
+            )}
           </div>
 
           {/* Address */}
-          {vendor.address && (
+          {address && (
             <div className="card p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><MapPin className="w-5 h-5 text-brand-500" />Address</h3>
               <p className="text-sm text-neutral-700">
-                {(vendor.address as any).line1}<br />
-                {(vendor.address as any).line2 && <>{(vendor.address as any).line2}<br /></>}
-                {(vendor.address as any).city}, {(vendor.address as any).state} {(vendor.address as any).pincode}<br />
-                {(vendor.address as any).country}
+                {address.street}<br />
+                {address.city}, {address.state} {address.pincode}<br />
+                {address.country || 'India'}
               </p>
             </div>
           )}
 
-          {/* Bank */}
-          {vendor.bank_details && (
+          {/* Bank Details */}
+          {bank && (
             <div className="card p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5 text-brand-500" />Bank Details</h3>
               <div className="grid grid-cols-2 gap-y-4">
-                <div><p className="label">Bank Name</p><p className="text-sm font-medium">{(vendor.bank_details as any).bank_name || '—'}</p></div>
-                <div><p className="label">Account Number</p><p className="text-sm font-medium font-mono">{(vendor.bank_details as any).account_number || '—'}</p></div>
-                <div><p className="label">IFSC Code</p><p className="text-sm font-medium font-mono">{(vendor.bank_details as any).ifsc_code || '—'}</p></div>
-                <div><p className="label">Branch</p><p className="text-sm font-medium">{(vendor.bank_details as any).branch || '—'}</p></div>
+                <div><p className="label">Bank Name</p><p className="text-sm font-medium">{bank.bankName || '—'}</p></div>
+                <div><p className="label">Account Number</p><p className="text-sm font-medium font-mono">{bank.accountNumber || '—'}</p></div>
+                <div><p className="label">IFSC Code</p><p className="text-sm font-medium font-mono">{bank.ifscCode || '—'}</p></div>
+                <div><p className="label">Account Holder</p><p className="text-sm font-medium">{bank.accountHolderName || '—'}</p></div>
               </div>
             </div>
           )}
@@ -85,11 +104,21 @@ export default function VendorDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           <div className="card p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Tag className="w-5 h-5 text-brand-500" />Categories</h3>
-            <div className="flex flex-wrap gap-2">
-              {vendor.categories?.length ? vendor.categories.map((c: string) => (
-                <span key={c} className="bg-neutral-100 text-neutral-700 px-3 py-1 rounded-full text-sm">{c}</span>
-              )) : <p className="text-sm text-neutral-500">No categories assigned</p>}
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Tag className="w-5 h-5 text-brand-500" />Category</h3>
+            <span className="bg-brand-50 text-brand-700 px-3 py-1 rounded-full text-sm font-medium">{vendor.category || 'Uncategorized'}</span>
+          </div>
+
+          <div className="card p-6">
+            <h3 className="text-sm font-semibold text-neutral-500 mb-4">Performance</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500 flex items-center gap-1.5"><Star className="w-4 h-4" />Rating</span>
+                <span className="font-bold">{Number(vendor.rating).toFixed(1)} / 5</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500 flex items-center gap-1.5"><ShoppingCart className="w-4 h-4" />Total Orders</span>
+                <span className="font-bold">{vendor.total_orders}</span>
+              </div>
             </div>
           </div>
 
