@@ -6,14 +6,14 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "types": ["node"],
+    "noPropertyAccessFromIndexSignature": false,
     "paths": {
       "@lib/*": ["./src/lib/*"],
       "@modules/*": ["./src/modules/*"],
       "@middleware/*": ["./src/middleware/*"],
-      "@jobs/*": ["./src/jobs/*"],
-      "@vendorbridge/shared": ["../../packages/shared/src"]
+      "@jobs/*": ["./src/jobs/*"]
     }
   },
-  "include": ["src/**/*", "prisma/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

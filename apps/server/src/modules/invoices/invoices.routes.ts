@@ -3,15 +3,15 @@ import { Request, Response, NextFunction } from 'express';
 import { invoiceService } from './invoices.service';
 import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/rbac';
-import { validate } from '../../middleware/validate';
-import { GenerateInvoiceSchema } from '@vendorbridge/shared';
+import { validate, validateQuery } from '../../middleware/validate';
+import { GenerateInvoiceSchema, PaginationSchema } from '@vendorbridge/shared';
 import { ok, created, paginated } from '../../lib/response';
 
 export const invoiceRoutes = Router();
 
 invoiceRoutes.use(authenticate);
 
-invoiceRoutes.get('/', async (req: Request, res: Response, next: NextFunction) => {
+invoiceRoutes.get('/', validateQuery(PaginationSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { invoices, meta } = await invoiceService.findAll(req.query as any);
     paginated(res, invoices, meta);
