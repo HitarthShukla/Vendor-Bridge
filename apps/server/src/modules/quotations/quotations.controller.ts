@@ -43,4 +43,11 @@ export const quotationController = {
       ok(res, quotation, 'Quotation selected');
     } catch (error) { next(error); }
   },
+
+  async findMyQuotations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const quotations = await quotationService.findMyQuotations(req.user!.userId);
+      ok(res, quotations);
+    } catch (error) { next(error); }
+  },
 };

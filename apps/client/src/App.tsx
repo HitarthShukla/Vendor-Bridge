@@ -24,6 +24,7 @@ const RFQDetailPage = lazy(() => import('@/features/rfqs/pages/RFQDetailPage'));
 
 // Quotations
 const QuotationComparePage = lazy(() => import('@/features/quotations/pages/QuotationComparePage'));
+const SubmitQuotationPage = lazy(() => import('@/features/quotations/pages/SubmitQuotationPage'));
 
 // Approvals
 const ApprovalsPage = lazy(() => import('@/features/approvals/pages/ApprovalsPage'));
@@ -146,6 +147,7 @@ function App() {
           <Route path="dashboard" element={<VendorDashboardPage />} />
           <Route path="rfqs" element={<RFQListPage />} />
           <Route path="rfqs/:id" element={<RFQDetailPage />} />
+          <Route path="rfqs/:rfqId/quote" element={<SubmitQuotationPage />} />
           <Route path="quotations" element={<VendorSubmitQuotationPage />} />
           <Route path="purchase-orders" element={<POListPage />} />
           <Route path="invoices" element={<InvoiceListPage />} />

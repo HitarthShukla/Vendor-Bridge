@@ -153,4 +153,19 @@ export const quotationService = {
 
     return quotation;
   },
+
+  async findMyQuotations(userId: string) {
+    const vendor = await prisma.vendor.findUnique({ where: { user_id: userId } });
+    if (!vendor) {
+      throw Object.assign(new Error('Vendor profile not found'), { status: 404, code: 'VENDOR_NOT_FOUND' });
+    }
+
+    return prisma.quotation.findMany({
+      where: { vendor_id: vendor.id },
+      include: {
+        rfq: { select: { rfq_number: true, title: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  },
 };

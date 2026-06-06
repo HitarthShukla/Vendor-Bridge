@@ -31,6 +31,21 @@ export const useSubmitQuotation = () => {
   });
 };
 
+export const useCreateAndSubmitQuotation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      const { data: createData } = await apiClient.post('/quotations', payload);
+      const quotation = createData.data;
+      const { data: submitData } = await apiClient.patch(`/quotations/${quotation.id}/submit`);
+      return submitData.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: quotationKeys.all });
+    },
+  });
+};
+
 export const useApproveQuotation = () => {
   const queryClient = useQueryClient();
   return useMutation({

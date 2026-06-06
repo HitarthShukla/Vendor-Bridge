@@ -9,6 +9,7 @@ export const quotationRoutes = Router();
 
 quotationRoutes.use(authenticate);
 
+quotationRoutes.get('/my', authorize('VENDOR'), quotationController.findMyQuotations);
 quotationRoutes.post('/', authorize('VENDOR'), validate(CreateQuotationSchema), quotationController.create);
 quotationRoutes.patch('/:id/submit', authorize('VENDOR'), quotationController.submit);
 quotationRoutes.patch('/:id/select', authorize('ADMIN', 'PROCUREMENT_OFFICER'), quotationController.select);

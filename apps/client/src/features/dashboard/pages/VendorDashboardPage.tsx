@@ -13,7 +13,7 @@ export default function VendorDashboardPage() {
     // Vendors see their own stats — the backend filters by the JWT vendor ID
     Promise.all([
       apiClient.get('/rfqs?status=PUBLISHED').then((r) => r.data.data?.rfqs?.length || r.data.data?.length || 0).catch(() => 0),
-      apiClient.get('/quotations/rfq/all').then((r) => r.data.data?.length || 0).catch(() => 0),
+      apiClient.get('/quotations/my').then((r) => r.data.data?.length || 0).catch(() => 0),
       apiClient.get('/purchase-orders').then((r) => r.data.data?.purchaseOrders?.length || r.data.data?.length || 0).catch(() => 0),
       apiClient.get('/invoices?status=SENT').then((r) => r.data.data?.invoices?.length || r.data.data?.length || 0).catch(() => 0),
     ]).then(([activeRfqs, myQuotations, purchaseOrders, invoicesDue]) => {

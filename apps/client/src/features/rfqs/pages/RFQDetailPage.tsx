@@ -66,7 +66,7 @@ export default function RFQDetailPage() {
 
           {/* Vendor-specific: show "Submit Quote" when RFQ is open */}
           {isVendorView && rfq.status === 'PUBLISHED' && (
-            <Link to={`/vendor/quotations`} className="btn-primary">
+            <Link to={`/vendor/rfqs/${rfq.id}/quote`} className="btn-primary">
               <Send className="w-4 h-4" />Submit Quotation
             </Link>
           )}

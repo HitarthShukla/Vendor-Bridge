@@ -9,7 +9,7 @@ export default function QuotationComparePage() {
   const { rfqId } = useParams<{ rfqId: string }>();
   const navigate = useNavigate();
   const { data: rfq, isLoading: rfqLoading } = useRfq(rfqId!);
-  const { data: quotations, isLoading: quotesLoading } = useQuotationsByRfq(rfqId!);
+  const { data, isLoading: quotesLoading } = useQuotationsByRfq(rfqId!);
   const approveMutation = useApproveQuotation();
   
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
@@ -17,11 +17,13 @@ export default function QuotationComparePage() {
   // Only MANAGER and ADMIN can approve quotations (backend enforces authorize('MANAGER') + ADMIN bypass)
   const canApprove = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
+  const quotations = data?.quotations || [];
+
   if (rfqLoading || quotesLoading) {
     return <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" /></div>;
   }
 
-  if (!rfq || !quotations || quotations.length === 0) {
+  if (!rfq || quotations.length === 0) {
     return (
       <div className="card p-12 text-center max-w-2xl mx-auto mt-12">
         <AlertCircle className="w-12 h-12 text-warning-500 mx-auto mb-4" />

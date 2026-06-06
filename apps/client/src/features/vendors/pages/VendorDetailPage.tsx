@@ -1,13 +1,25 @@
 import { useParams, Link } from 'react-router-dom';
-import { useVendor } from '../api/vendorApi';
+import { useVendor, useUpdateVendor } from '../api/vendorApi';
 import { useAuthStore } from '@/store/authStore';
 import { ArrowLeft, Building2, Mail, Phone, MapPin, CreditCard, Hash, Tag, Star, ShoppingCart } from 'lucide-react';
 
 export default function VendorDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: vendor, isLoading, error } = useVendor(id!);
+  const updateVendor = useUpdateVendor(id!);
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === 'ADMIN' || user?.role === 'PROCUREMENT_OFFICER';
+
+  const handleApprove = async () => {
+    if (!confirm('Are you sure you want to approve this vendor?')) return;
+    try {
+      await updateVendor.mutateAsync({ status: 'ACTIVE' });
+      alert('Vendor approved successfully');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to approve vendor');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -45,13 +57,24 @@ export default function VendorDetailPage() {
           <h2 className="text-2xl font-bold text-neutral-900">{vendor.company_name}</h2>
           <p className="text-neutral-500 text-sm">{vendor.name} — {vendor.email}</p>
         </div>
-        <span className={`badge ${
-          vendor.status === 'ACTIVE' ? 'badge-active' :
-          vendor.status === 'INACTIVE' ? 'badge-draft' :
-          vendor.status === 'PENDING_VERIFICATION' ? 'badge-pending' : 'badge-danger'
-        }`}>
-          {vendor.status?.replace('_', ' ')}
-        </span>
+        <div className="flex items-center gap-3">
+          {canEdit && vendor.status === 'PENDING_VERIFICATION' && (
+            <button
+              onClick={handleApprove}
+              className="btn-primary"
+              disabled={updateVendor.isPending}
+            >
+              {updateVendor.isPending ? 'Approving...' : 'Approve Vendor'}
+            </button>
+          )}
+          <span className={`badge ${
+            vendor.status === 'ACTIVE' ? 'badge-active' :
+            vendor.status === 'INACTIVE' ? 'badge-draft' :
+            vendor.status === 'PENDING_VERIFICATION' ? 'badge-pending' : 'badge-danger'
+          }`}>
+            {vendor.status?.replace('_', ' ')}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

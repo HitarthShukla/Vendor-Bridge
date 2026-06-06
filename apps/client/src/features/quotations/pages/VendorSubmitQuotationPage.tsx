@@ -17,7 +17,7 @@ export default function VendorSubmitQuotationPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient.get('/quotations/rfq/all')
+    apiClient.get('/quotations/my')
       .then((r) => setQuotations(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
