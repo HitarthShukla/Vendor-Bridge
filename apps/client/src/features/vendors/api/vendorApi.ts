@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
-import type { Vendor, CreateVendorInput, UpdateVendorInput } from '@vendorbridge/shared';
 
 export const vendorKeys = {
   all: ['vendors'] as const,
@@ -14,7 +13,7 @@ export const useVendors = (query = '') => {
   return useQuery({
     queryKey: vendorKeys.list(query),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ data: { vendors: Vendor[]; meta: any } }>(`/vendors${query}`);
+      const { data } = await apiClient.get(`/vendors${query}`);
       return data.data;
     },
   });
@@ -24,7 +23,7 @@ export const useVendor = (id: string) => {
   return useQuery({
     queryKey: vendorKeys.detail(id),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ data: Vendor }>(`/vendors/${id}`);
+      const { data } = await apiClient.get(`/vendors/${id}`);
       return data.data;
     },
     enabled: !!id,
@@ -34,8 +33,8 @@ export const useVendor = (id: string) => {
 export const useCreateVendor = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: CreateVendorInput) => {
-      const { data } = await apiClient.post<{ data: Vendor }>('/vendors', payload);
+    mutationFn: async (payload: any) => {
+      const { data } = await apiClient.post('/vendors', payload);
       return data.data;
     },
     onSuccess: () => {
@@ -47,8 +46,8 @@ export const useCreateVendor = () => {
 export const useUpdateVendor = (id: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: UpdateVendorInput) => {
-      const { data } = await apiClient.patch<{ data: Vendor }>(`/vendors/${id}`, payload);
+    mutationFn: async (payload: any) => {
+      const { data } = await apiClient.patch(`/vendors/${id}`, payload);
       return data.data;
     },
     onSuccess: () => {

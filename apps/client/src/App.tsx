@@ -1,18 +1,45 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-
-// Lazy-loaded layouts and pages
 import { lazy, Suspense } from 'react';
 
 const AppLayout = lazy(() => import('@/layouts/AppLayout'));
 const RoleGuard = lazy(() => import('@/components/guards/RoleGuard'));
 
+// Auth
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
-const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
-const VendorListPage = lazy(() => import('@/features/vendors/pages/VendorListPage'));
 
-// Loading fallback
+// Dashboard
+const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
+
+// Vendors
+const VendorListPage = lazy(() => import('@/features/vendors/pages/VendorListPage'));
+const VendorCreatePage = lazy(() => import('@/features/vendors/pages/VendorCreatePage'));
+const VendorDetailPage = lazy(() => import('@/features/vendors/pages/VendorDetailPage'));
+
+// RFQs
+const RFQListPage = lazy(() => import('@/features/rfqs/pages/RFQListPage'));
+const RFQCreatePage = lazy(() => import('@/features/rfqs/pages/RFQCreatePage'));
+const RFQDetailPage = lazy(() => import('@/features/rfqs/pages/RFQDetailPage'));
+
+// Quotations
+const QuotationComparePage = lazy(() => import('@/features/quotations/pages/QuotationComparePage'));
+
+// Approvals
+const ApprovalsPage = lazy(() => import('@/features/approvals/pages/ApprovalsPage'));
+
+// Purchase Orders
+const POListPage = lazy(() => import('@/features/purchase-orders/pages/POListPage'));
+
+// Invoices
+const InvoiceListPage = lazy(() => import('@/features/invoices/pages/InvoiceListPage'));
+
+// Reports
+const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage'));
+
+// AI Chat Widget
+const AIChatWidget = lazy(() => import('@/features/ai/components/AIChatWidget'));
+
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-50">
@@ -24,7 +51,6 @@ function PageLoader() {
   );
 }
 
-// Global auth guard
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -32,6 +58,8 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
@@ -50,13 +78,31 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
+
+          {/* Vendors */}
           <Route path="/vendors" element={<VendorListPage />} />
-          <Route path="/rfqs" element={<div>RFQs (WIP)</div>} />
-          <Route path="/quotations" element={<div>Quotations (WIP)</div>} />
-          <Route path="/approvals" element={<div>Approvals (WIP)</div>} />
-          <Route path="/purchase-orders" element={<div>Purchase Orders (WIP)</div>} />
-          <Route path="/invoices" element={<div>Invoices (WIP)</div>} />
-          <Route path="/reports" element={<div>Reports (WIP)</div>} />
+          <Route path="/vendors/new" element={<VendorCreatePage />} />
+          <Route path="/vendors/:id" element={<VendorDetailPage />} />
+
+          {/* RFQs */}
+          <Route path="/rfqs" element={<RFQListPage />} />
+          <Route path="/rfqs/new" element={<RFQCreatePage />} />
+          <Route path="/rfqs/:id" element={<RFQDetailPage />} />
+
+          {/* Quotations */}
+          <Route path="/quotations/compare/:rfqId" element={<QuotationComparePage />} />
+
+          {/* Approvals */}
+          <Route path="/approvals" element={<ApprovalsPage />} />
+
+          {/* Purchase Orders */}
+          <Route path="/purchase-orders" element={<POListPage />} />
+
+          {/* Invoices */}
+          <Route path="/invoices" element={<InvoiceListPage />} />
+
+          {/* Reports */}
+          <Route path="/reports" element={<ReportsPage />} />
         </Route>
 
         {/* Protected Vendor Routes */}
@@ -70,16 +116,20 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route path="rfqs" element={<div>Vendor Active RFQs (WIP)</div>} />
-          <Route path="quotations" element={<div>Vendor Quotations (WIP)</div>} />
-          <Route path="purchase-orders" element={<div>Vendor POs (WIP)</div>} />
-          <Route path="invoices" element={<div>Vendor Invoices (WIP)</div>} />
+          <Route path="rfqs" element={<RFQListPage />} />
+          <Route path="rfqs/:id" element={<RFQDetailPage />} />
+          <Route path="quotations" element={<QuotationComparePage />} />
+          <Route path="purchase-orders" element={<POListPage />} />
+          <Route path="invoices" element={<InvoiceListPage />} />
         </Route>
 
         {/* Default redirect */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+
+      {/* Global AI Chat Widget — visible when authenticated */}
+      {isAuthenticated && <AIChatWidget />}
     </Suspense>
   );
 }

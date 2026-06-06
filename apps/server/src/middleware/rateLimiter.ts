@@ -55,7 +55,7 @@ export const generalLimiter = rateLimiter({
 
 export const authLimiter = rateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10,
+  maxRequests: 100,
   keyPrefix: 'rl:auth',
 });
 

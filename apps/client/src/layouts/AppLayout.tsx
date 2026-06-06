@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { apiClient } from '@/lib/apiClient';
+import NotificationCenter from '@/features/notifications/components/NotificationCenter';
 import {
   BarChart3,
   FileText,
@@ -13,21 +14,21 @@ import {
   Bell,
   LogOut,
   Menu,
+  PieChart,
 } from 'lucide-react';
 
 export default function AppLayout() {
   const { user, logout } = useAuthStore();
-  const { sidebarOpen, toggleSidebar } = useUIStore();
+  const { sidebarOpen, toggleSidebar, notificationDrawerOpen, toggleNotificationDrawer } = useUIStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    // Fetch unread notifications count
     apiClient.get('/notifications/unread').then((res) => {
-      setUnreadCount(res.data.data.count);
-    }).catch(console.error);
-  }, []);
+      setUnreadCount(res.data.data?.count ?? 0);
+    }).catch(() => {});
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -48,7 +49,6 @@ export default function AppLayout() {
       { label: 'Dashboard', icon: BarChart3, href: '/dashboard' },
       { label: 'Vendors', icon: Users, href: '/vendors' },
       { label: 'RFQs', icon: FileText, href: '/rfqs' },
-      { label: 'Quotations', icon: FileText, href: '/quotations' },
     ];
 
     if (role === 'ADMIN' || role === 'MANAGER') {
@@ -57,7 +57,8 @@ export default function AppLayout() {
 
     links.push(
       { label: 'Purchase Orders', icon: ShoppingCart, href: '/purchase-orders' },
-      { label: 'Invoices', icon: BarChart3, href: '/invoices' }
+      { label: 'Invoices', icon: FileText, href: '/invoices' },
+      { label: 'Reports', icon: PieChart, href: '/reports' }
     );
 
     return links;
@@ -68,7 +69,7 @@ export default function AppLayout() {
   return (
     <div className="flex min-h-screen bg-neutral-50" id="app-layout">
       {/* Sidebar */}
-      <aside className={`sidebar transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+      <aside className={`sidebar transition-all duration-300 flex-shrink-0 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="p-4 flex items-center gap-3 border-b border-neutral-800">
           <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center flex-shrink-0">
             <Boxes className="w-6 h-6 text-white" />
@@ -76,7 +77,7 @@ export default function AppLayout() {
           {sidebarOpen && <span className="text-lg font-bold tracking-tight text-white">VendorBridge</span>}
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {sidebarLinks.map((link) => (
             <Link
               key={link.label}
@@ -108,12 +109,12 @@ export default function AppLayout() {
             </button>
             <div className="hidden sm:block">
               <h1 className="text-xl font-semibold text-neutral-900 capitalize">
-                {location.pathname.split('/')[1] || 'Dashboard'}
+                {location.pathname.split('/').filter(Boolean)[0]?.replace('-', ' ') || 'Dashboard'}
               </h1>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="btn-ghost p-2 rounded-lg relative" id="notification-bell">
+            <button onClick={toggleNotificationDrawer} className="btn-ghost p-2 rounded-lg relative" id="notification-bell">
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
@@ -140,6 +141,9 @@ export default function AppLayout() {
           </div>
         </div>
       </main>
+
+      {/* Notification Center Drawer */}
+      <NotificationCenter isOpen={notificationDrawerOpen} onClose={toggleNotificationDrawer} />
     </div>
   );
 }
